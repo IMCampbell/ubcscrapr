@@ -1,6 +1,6 @@
 {
   "name": "ubcscrapr",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Scrapes course and room data from ubc's calendar",
   "main": "index.js",
   "scripts": {
@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/IMCampbell/ubcscrapr/issues"
   },
-  "homepage": "https://github.com/IMCampbell/ubcscrapr#readme"
+  "homepage": "https://github.com/IMCampbell/ubcscrapr#readme",
+  "dependencies": {
+    "cheerio" : ">=0.22.0",
+    "request" : ">=2.79.0"
+  }
 }
