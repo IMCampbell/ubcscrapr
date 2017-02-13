@@ -1,0 +1,19 @@
+{
+  "name": "ubcscrapr",
+  "version": "0.1.0",
+  "description": "Scrapes course and room data from ubc's calendar",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IMCampbell/ubcscrapr.git"
+  },
+  "author": "Ian Campbell <ianmcampbell94@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/IMCampbell/ubcscrapr/issues"
+  },
+  "homepage": "https://github.com/IMCampbell/ubcscrapr#readme"
+}
