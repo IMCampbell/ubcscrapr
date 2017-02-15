@@ -1,11 +1,14 @@
 const cheerio = require('cheerio');
 const request = require("request");
+const space = require("./requestSpacer");
+const log = require("./logger");
 
-module.exports = function main(term) {
-    var roomSlots = [];
+module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace) {
+    let roomSlots = [];
     const reqUrl = 'http://courses.students.ubc.ca/cs/main?pname=subjarea&tname=subjareas&req=0';
     return new Promise(
         function(resolve, reject) {
+            space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
                     const depts = [];
@@ -19,7 +22,7 @@ module.exports = function main(term) {
                     });
                     const promises = [];
                     depts.forEach(function (dept) {
-                        promises.push(parseDepartment(term, dept));
+                        promises.push(parseDepartment(term, dept, verbose, minRequestSpace));
                     });
                     Promise.all(promises).then(function(returnSlotsArray) {
                         returnSlotsArray.forEach(function(returnSlots) {
@@ -27,17 +30,20 @@ module.exports = function main(term) {
                         });
                         resolve(roomSlots);
                     });
+                } else {
+                    reject(error);
                 }
             });
         }
     );
 };
 
-function parseDepartment(term, dept) {
-    var roomSlots = [];
+function parseDepartment(term, dept, verbose, minRequestSpace) {
+    let roomSlots = [];
     const reqUrl = 'http://courses.students.ubc.ca/cs/main?pname=subjarea&tname=subjareas&req=1&dept=' + dept;
     return new Promise(
         function(resolve, reject) {
+            space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
                     const courses = [];
@@ -51,26 +57,30 @@ function parseDepartment(term, dept) {
                     });
                     const promises = [];
                     courses.forEach(function (course) {
-                        promises.push(parseCourse(term, dept, course));
+                        promises.push(parseCourse(term, dept, course, verbose, minRequestSpace));
                     });
                     Promise.all(promises).then(function(returnSlotsArray) {
                         returnSlotsArray.forEach(function(returnSlots) {
                             roomSlots = roomSlots.concat(returnSlots);
                         });
+                        log(dept, verbose);
                         resolve(roomSlots);
                     });
+                } else {
+                    reject(error);
                 }
             });
         }
     );
 }
 
-function parseCourse(term, dept, course) {
-    var roomSlots = [];
+function parseCourse(term, dept, course, verbose, minRequestSpace) {
+    let roomSlots = [];
     const reqUrl = 'http://courses.students.ubc.ca/cs/main?pname=subjarea&tname=subjareas&req=3&dept=' +
         dept + '&course=' + course;
     return new Promise(
         function(resolve, reject) {
+            space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
                     const sections = [];
@@ -84,26 +94,30 @@ function parseCourse(term, dept, course) {
                     });
                     const promises = [];
                     sections.forEach(function (section) {
-                        promises.push(parseRoomSlot(term, dept, course, section));
+                        promises.push(parseSection(term, dept, course, section, minRequestSpace));
                     });
                     Promise.all(promises).then(function(returnSlotsArray) {
                         returnSlotsArray.forEach(function(returnSlots) {
                             roomSlots = roomSlots.concat(returnSlots);
                         });
+                        log(dept + " " + course, verbose);
                         resolve(roomSlots);
                     });
+                } else {
+                    reject(error);
                 }
             });
         }
     );
 }
 
-function parseRoomSlot(term, dept, course, section) {
+function parseSection(term, dept, course, section, minRequestSpace) {
     const roomSlots = [];
     const reqUrl = 'https://courses.students.ubc.ca/cs/main?pname=subjarea&tname=subjareas&req=5&dept=' +
         dept + '&course=' + course + '&section=' + section;
     return new Promise(
         function(resolve, reject) {
+            space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
                     $ = cheerio.load(body);
@@ -149,6 +163,8 @@ function parseRoomSlot(term, dept, course, section) {
                         }
                     });
                     resolve(roomSlots);
+                } else {
+                    reject(error);
                 }
             });
         }
