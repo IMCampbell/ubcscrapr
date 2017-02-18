@@ -11,15 +11,7 @@ module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace, deptsT
             space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
-                    const depts = [];
-                    $ = cheerio.load(body);
-                    const links = $('a');
-                    $(links).each(function(i, link) {
-                        const url = link.attribs.href;
-                        if (url && url.indexOf('dept=') != -1){
-                            depts.push(url.split('').splice(url.indexOf("dept=") + 5).join(''))
-                        }
-                    });
+                    const depts = getListOfChildren("dept", body);
                     const promises = [];
                     depts.forEach(function (dept) {
                         if (deptsToScrape.length == 0 || deptsToScrape.indexOf(dept) != -1) {
@@ -48,15 +40,7 @@ function parseDepartment(term, dept, verbose, minRequestSpace) {
             space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
-                    const courses = [];
-                    $ = cheerio.load(body);
-                    const links = $('a');
-                    $(links).each(function (i, link) {
-                        const url = link.attribs.href;
-                        if (url && url.indexOf('course=') != -1) {
-                            courses.push(url.split('').splice(url.indexOf("course=") + 7).join(''))
-                        }
-                    });
+                    const courses = getListOfChildren("course", body);
                     const promises = [];
                     courses.forEach(function (course) {
                         promises.push(parseCourse(term, dept, course, verbose, minRequestSpace));
@@ -85,15 +69,7 @@ function parseCourse(term, dept, course, verbose, minRequestSpace) {
             space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
                 if (!error && response.statusCode == 200) {
-                    const sections = [];
-                    $ = cheerio.load(body);
-                    const links = $('a');
-                    $(links).each(function (i, link) {
-                        const url = link.attribs.href;
-                        if (url && url.indexOf('section=') != -1) {
-                            sections.push(url.split('').splice(url.indexOf("section=") + 8).join(''))
-                        }
-                    });
+                    const sections = getListOfChildren("section", body);
                     const promises = [];
                     sections.forEach(function (section) {
                         promises.push(parseSection(term, dept, course, section, minRequestSpace));
@@ -127,10 +103,10 @@ function parseSection(term, dept, course, section, minRequestSpace) {
                     $(links).each(function (i, link) {
                         const url = link.attribs.href;
                         if (url && url.indexOf('roomID=') != -1) {
-                            let roomSlot = {};
                             const table = link["parent"]['parent'];
                             let numTd = 0;
                             let correctTerm = true;
+                            let roomSlot = {};
                             table['children'].forEach(function (td) {
                                 if (correctTerm && td['name'] && td['name'] == 'td') {
                                     let content = td['children'][0]['data'];
@@ -171,4 +147,17 @@ function parseSection(term, dept, course, section, minRequestSpace) {
             });
         }
     );
+}
+
+function getListOfChildren(nameOfChild, html) {
+    let listOfChildren = [];
+    $ = cheerio.load(html);
+    const links = $('a');
+    $(links).each(function(i, link) {
+        const url = link.attribs.href;
+        if (url && url.indexOf(nameOfChild + '=') != -1){
+            listOfChildren.push(url.split('').splice(url.indexOf(nameOfChild + '=') + nameOfChild.length + 1).join(''));
+        }
+    });
+    return listOfChildren;
 }
