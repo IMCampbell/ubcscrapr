@@ -1,6 +1,6 @@
 {
   "name": "ubcscrapr",
-  "version": "1.1.2",
+  "version": "1.2.2",
   "description": "Scrapes course and room data from ubc's calendar",
   "main": "src/index.js",
   "scripts": {
