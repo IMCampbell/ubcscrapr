@@ -3,7 +3,7 @@ const request = require("request");
 const space = require("./requestSpacer");
 const log = require("./logger");
 
-module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace) {
+module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace, deptsToScrape) {
     let roomSlots = [];
     const reqUrl = 'http://courses.students.ubc.ca/cs/main?pname=subjarea&tname=subjareas&req=0';
     return new Promise(
@@ -22,7 +22,9 @@ module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace) {
                     });
                     const promises = [];
                     depts.forEach(function (dept) {
-                        promises.push(parseDepartment(term, dept, verbose, minRequestSpace));
+                        if (deptsToScrape.length == 0 || deptsToScrape.indexOf(dept) != -1) {
+                            promises.push(parseDepartment(term, dept, verbose, minRequestSpace));
+                        }
                     });
                     Promise.all(promises).then(function(returnSlotsArray) {
                         returnSlotsArray.forEach(function(returnSlots) {
