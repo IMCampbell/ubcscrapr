@@ -1,7 +1,7 @@
 const scrapeRS = require("./roomSlotScrapr");
 
 /**
- * Returns an object containing all class sections with their date and time and room and building
+ * Returns an object containing all class sections with their weekday, time, room, building, and address
  * @param semester: the semester that the classes belong to
  * @param minRequestSpace: the minimum amount of time between requests to UBCs webserver in miliseconds
  * @param verbose: whether or not you want to see console.logs

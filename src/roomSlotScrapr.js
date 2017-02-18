@@ -89,6 +89,8 @@ function parseCourse(term, dept, course, verbose, minRequestSpace) {
     );
 }
 
+let roomAddressDict = {};
+
 function parseSection(term, dept, course, section, minRequestSpace) {
     const roomSlots = [];
     const reqUrl = 'https://courses.students.ubc.ca/cs/main?pname=subjarea&tname=subjareas&req=5&dept=' +
@@ -100,6 +102,7 @@ function parseSection(term, dept, course, section, minRequestSpace) {
                 if (!error && response.statusCode == 200) {
                     $ = cheerio.load(body);
                     const links = $('a');
+                    let promises = [];
                     $(links).each(function (i, link) {
                         const url = link.attribs.href;
                         if (url && url.indexOf('roomID=') != -1) {
@@ -135,15 +138,52 @@ function parseSection(term, dept, course, section, minRequestSpace) {
                                 }
                             });
                             if (correctTerm) {
+                                let buildingId = url.split('roomID')[0].split('').splice(url.indexOf("buildingID=") + 11).join('').slice(0,-1);
+                                promises.push(addBuildingAddressToRoomSlot(url, minRequestSpace, buildingId, roomSlot));
                                 roomSlot['roomID'] = url.split('').splice(url.indexOf("roomID=") + 7).join('');
                                 roomSlots.push(roomSlot);
                             }
                         }
                     });
-                    resolve(roomSlots);
+                    Promise.all(promises).then(function() {
+                        resolve(roomSlots);
+                    });
                 } else {
                     reject(error);
                 }
+            });
+        }
+    );
+}
+
+function addBuildingAddressToRoomSlot(detailPageURL, minRequestSpace, buildingId, roomSlot) {
+    return new Promise(
+        function(resolve, reject) {
+            new Promise(function (resolve, reject) {
+                if (!(buildingId in roomAddressDict)) {
+                    space(minRequestSpace);
+                    if (!(buildingId in roomAddressDict)) {
+                        request(detailPageURL, function (error, response, body) {
+                            if (!error && response.statusCode == 200) {
+                                $ = cheerio.load(body);
+                                const TDs = $('.displayBoxFieldAlignTop').next();
+                                roomAddressDict[buildingId] = TDs[0].children[0].data;
+                                resolve(`added ${ buildingId } to dict ${ JSON.stringify(roomAddressDict) }`);
+                            } else {
+                                reject(error);
+                            }
+                        });
+                    } else {
+                        resolve("already in dict");
+                    }
+                } else {
+                    resolve("already in dict");
+                }
+            }).then(function(data) {
+                roomSlot['address'] = roomAddressDict['buildingID'];
+                resolve("successfully added");
+            }).catch(function(error) {
+                reject(error);
             });
         }
     );
