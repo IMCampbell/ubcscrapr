@@ -10,6 +10,7 @@ module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace, deptsT
         function(resolve, reject) {
             space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
+                log.logCount('deptlist', verbose);
                 if (!error && response.statusCode == 200) {
                     const depts = getListOfChildren("dept", body);
                     const promises = [];
@@ -22,6 +23,7 @@ module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace, deptsT
                         returnSlotsArray.forEach(function(returnSlots) {
                             roomSlots = roomSlots.concat(returnSlots);
                         });
+                        log.printCounts(verbose);
                         resolve(roomSlots);
                     });
                 } else {
@@ -39,6 +41,7 @@ function parseDepartment(term, dept, verbose, minRequestSpace) {
         function(resolve, reject) {
             space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
+                log.logCount('department', verbose);
                 if (!error && response.statusCode == 200) {
                     const courses = getListOfChildren("course", body);
                     const promises = [];
@@ -49,7 +52,7 @@ function parseDepartment(term, dept, verbose, minRequestSpace) {
                         returnSlotsArray.forEach(function(returnSlots) {
                             roomSlots = roomSlots.concat(returnSlots);
                         });
-                        log(dept, verbose);
+                        log.logParse(dept, verbose);
                         resolve(roomSlots);
                     });
                 } else {
@@ -68,17 +71,18 @@ function parseCourse(term, dept, course, verbose, minRequestSpace) {
         function(resolve, reject) {
             space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
+                log.logCount('course', verbose);
                 if (!error && response.statusCode == 200) {
-                    const sections = getListOfChildren("section", body);
+                    const sections = getListOfSections(term, body);
                     const promises = [];
                     sections.forEach(function (section) {
-                        promises.push(parseSection(term, dept, course, section, minRequestSpace));
+                        promises.push(parseSection(dept, course, section, verbose, minRequestSpace));
                     });
                     Promise.all(promises).then(function(returnSlotsArray) {
                         returnSlotsArray.forEach(function(returnSlots) {
                             roomSlots = roomSlots.concat(returnSlots);
                         });
-                        log(dept + " " + course, verbose);
+                        log.logParse(dept + " " + course, verbose);
                         resolve(roomSlots);
                     });
                 } else {
@@ -91,7 +95,7 @@ function parseCourse(term, dept, course, verbose, minRequestSpace) {
 
 let roomAddressDict = {};
 
-function parseSection(term, dept, course, section, minRequestSpace) {
+function parseSection(dept, course, section, verbose, minRequestSpace) {
     const roomSlots = [];
     const reqUrl = 'https://courses.students.ubc.ca/cs/main?pname=subjarea&tname=subjareas&req=5&dept=' +
         dept + '&course=' + course + '&section=' + section;
@@ -99,6 +103,7 @@ function parseSection(term, dept, course, section, minRequestSpace) {
         function(resolve, reject) {
             space(minRequestSpace);
             request(reqUrl, function (error, response, body) {
+                log.logCount('section', verbose);
                 if (!error && response.statusCode == 200) {
                     $ = cheerio.load(body);
                     const links = $('a');
@@ -108,17 +113,11 @@ function parseSection(term, dept, course, section, minRequestSpace) {
                         if (url && url.indexOf('roomID=') != -1) {
                             const table = link["parent"]['parent'];
                             let numTd = 0;
-                            let correctTerm = true;
                             let roomSlot = {};
                             table['children'].forEach(function (td) {
-                                if (correctTerm && td['name'] && td['name'] == 'td') {
+                                if (td['name'] && td['name'] == 'td') {
                                     let content = td['children'][0]['data'];
                                     switch (numTd) {
-                                        case 0:
-                                            if (content.indexOf(term) == -1) {
-                                                correctTerm = false;
-                                            }
-                                            break;
                                         case 1:
                                             roomSlot['day'] = content.trim().replace(/[^0-9a-zA-Z\s]/g, '').split(' ');
                                             break;
@@ -137,12 +136,11 @@ function parseSection(term, dept, course, section, minRequestSpace) {
                                     numTd++;
                                 }
                             });
-                            if (correctTerm) {
-                                let buildingId = url.split('roomID')[0].split('').splice(url.indexOf("buildingID=") + 11).join('').slice(0,-1);
-                                promises.push(addBuildingAddressToRoomSlot(url, minRequestSpace, buildingId, roomSlot));
-                                roomSlot['roomID'] = url.split('').splice(url.indexOf("roomID=") + 7).join('');
-                                roomSlots.push(roomSlot);
-                            }
+                            let buildingId = url.split('roomID')[0].split('').splice(url.indexOf("buildingID=") + 11).join('').slice(0,-1);
+                            promises.push(addBuildingAddressToRoomSlot(url, verbose, minRequestSpace, buildingId, roomSlot));
+                            roomSlot['roomID'] = url.split('').splice(url.indexOf("roomID=") + 7).join('');
+                            roomSlot['sectionID'] = `${dept} ${course} ${section}`;
+                            roomSlots.push(roomSlot);
                         }
                     });
                     Promise.all(promises).then(function() {
@@ -156,7 +154,7 @@ function parseSection(term, dept, course, section, minRequestSpace) {
     );
 }
 
-function addBuildingAddressToRoomSlot(detailPageURL, minRequestSpace, buildingId, roomSlot) {
+function addBuildingAddressToRoomSlot(detailPageURL, verbose, minRequestSpace, buildingId, roomSlot) {
     return new Promise(
         function(resolve, reject) {
             new Promise(function (resolve, reject) {
@@ -164,6 +162,7 @@ function addBuildingAddressToRoomSlot(detailPageURL, minRequestSpace, buildingId
                     space(minRequestSpace);
                     if (!(buildingId in roomAddressDict)) {
                         request(detailPageURL, function (error, response, body) {
+                            log.logCount('building page', verbose);
                             if (!error && response.statusCode == 200) {
                                 $ = cheerio.load(body);
                                 const TDs = $('.displayBoxFieldAlignTop').next();
@@ -179,8 +178,8 @@ function addBuildingAddressToRoomSlot(detailPageURL, minRequestSpace, buildingId
                 } else {
                     resolve("already in dict");
                 }
-            }).then(function(data) {
-                roomSlot['address'] = roomAddressDict['buildingID'];
+            }).then(function() {
+                roomSlot['address'] = roomAddressDict[buildingId];
                 resolve("successfully added");
             }).catch(function(error) {
                 reject(error);
@@ -197,6 +196,21 @@ function getListOfChildren(nameOfChild, html) {
         const url = link.attribs.href;
         if (url && url.indexOf(nameOfChild + '=') != -1){
             listOfChildren.push(url.split('').splice(url.indexOf(nameOfChild + '=') + nameOfChild.length + 1).join(''));
+        }
+    });
+    return listOfChildren;
+}
+
+function getListOfSections(term, html) {
+    let listOfChildren = [];
+    $ = cheerio.load(html);
+    const links = $('a');
+    $(links).each(function(i, link) {
+        const url = link.attribs.href;
+        if (url && url.indexOf('section=') != -1){
+            if (link.parent.next.next.next.next.children[0].data.indexOf(term) !== -1) {
+                listOfChildren.push(url.split('').splice(url.indexOf('section=') + 8).join(''));
+            }
         }
     });
     return listOfChildren;

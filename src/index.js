@@ -8,7 +8,7 @@ const scrapeRS = require("./roomSlotScrapr");
  * @param departments: an optional list that if present will tell the scrapr to only scrape the given departments
  */
 exports.getRoomSlots = function (semester, minRequestSpace = 1000, verbose = false, departments = []) {
-    validateInput("term", semester, [1, 2], "set");
+    validateInput("semester", semester, [1, 2], "set");
     validateInput("minRequestSpace", minRequestSpace, [0, 100000], "range");
     validateInput("verbose", verbose, [true, false], "set");
     validateInput("departments", departments, "Array", "type");
@@ -18,9 +18,9 @@ exports.getRoomSlots = function (semester, minRequestSpace = 1000, verbose = fal
 /**
  * Function to ensure that variables passed to API are of the correct types and bounded by reasonable values.
  * @param inputName: the name of the variable
- * @param input the: value of the variable
+ * @param input: the value of the variable
  * @param acceptableValues: parameter containing valid values for input to take
- * @param acceptableValueType a flag:
+ * @param acceptableValueType: a flag
  *           range means that the acceptableValues is a list containing a min and a max value
  *           set means that the acceptableValues is a list containing all acceptable values
  *           type means that the acceptableValues is a single string containing the type that input must be
