@@ -7,8 +7,17 @@ const scrapeRS = require("./roomSlotScrapr");
  * @param verbose: whether or not you want to see console.logs
  * @param departments: an optional list that if present will tell the scrapr to only scrape the given departments
  */
-exports.getRoomSlots = function (semester, minRequestSpace = 1000, verbose = false, departments = []) {
-    validateInput("semester", semester, [1, 2], "set");
+exports.getRoomSlots = function (semester, minRequestSpace, verbose, departments) {
+    if (!minRequestSpace) {
+        minRequestSpace = 1000;
+    }
+    if (!verbose) {
+        verbose = false;
+    }
+    if (!departments) {
+        departments = [];
+    }
+    validateInput("term", semester, [1, 2], "set");
     validateInput("minRequestSpace", minRequestSpace, [0, 100000], "range");
     validateInput("verbose", verbose, [true, false], "set");
     validateInput("departments", departments, "Array", "type");
