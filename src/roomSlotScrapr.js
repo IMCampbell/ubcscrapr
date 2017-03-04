@@ -2,6 +2,7 @@ const cheerio = require('cheerio');
 const request = require("request");
 const space = require("./requestSpacer");
 const log = require("./logger");
+const utils = require("./utils");
 
 module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace, deptsToScrape) {
     let roomSlots = [];
@@ -12,7 +13,7 @@ module.exports = function scrapeRoomSlots(term, verbose, minRequestSpace, deptsT
             request(reqUrl, function (error, response, body) {
                 log.logCount('deptlist', verbose);
                 if (!error && response.statusCode == 200) {
-                    const depts = getListOfChildren("dept", body);
+                    const depts = utils.getListOfChildren("dept", body);
                     const promises = [];
                     depts.forEach(function (dept) {
                         if (deptsToScrape.length == 0 || deptsToScrape.indexOf(dept) != -1) {
@@ -43,7 +44,7 @@ function parseDepartment(term, dept, verbose, minRequestSpace) {
             request(reqUrl, function (error, response, body) {
                 log.logCount('department', verbose);
                 if (!error && response.statusCode == 200) {
-                    const courses = getListOfChildren("course", body);
+                    const courses = utils.getListOfChildren("course", body);
                     const promises = [];
                     courses.forEach(function (course) {
                         promises.push(parseCourse(term, dept, course, verbose, minRequestSpace));
@@ -73,7 +74,7 @@ function parseCourse(term, dept, course, verbose, minRequestSpace) {
             request(reqUrl, function (error, response, body) {
                 log.logCount('course', verbose);
                 if (!error && response.statusCode == 200) {
-                    const sections = getListOfSections(term, body);
+                    const sections = utils.getListOfSections(term, body);
                     const promises = [];
                     sections.forEach(function (section) {
                         promises.push(parseSection(dept, course, section, verbose, minRequestSpace));
@@ -186,19 +187,6 @@ function addBuildingAddressToRoomSlot(detailPageURL, verbose, minRequestSpace, b
             });
         }
     );
-}
-
-function getListOfChildren(nameOfChild, html) {
-    let listOfChildren = [];
-    $ = cheerio.load(html);
-    const links = $('a');
-    $(links).each(function(i, link) {
-        const url = link.attribs.href;
-        if (url && url.indexOf(nameOfChild + '=') != -1){
-            listOfChildren.push(url.split('').splice(url.indexOf(nameOfChild + '=') + nameOfChild.length + 1).join(''));
-        }
-    });
-    return listOfChildren;
 }
 
 function getListOfSections(term, html) {
